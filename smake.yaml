@@ -1,0 +1,10 @@
+builds:
+  - doot_release:
+    - sources: 'main.cpp, util.cpp, parser.cpp'
+
+targets:
+  - doot:
+    - builds:
+      - default: doot_release
+    - postbuilds:
+      - default: '{}'
