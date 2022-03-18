@@ -1,0 +1,3 @@
+[submodule "tuicpp"]
+	path = tuicpp
+	url = https://github.com/vedavamadathil/tuicpp

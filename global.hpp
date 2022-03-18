@@ -6,6 +6,7 @@
 #include <string>
 #include <vector>
 
+#include "tuicpp/tuicpp.hpp"
 
 /////////////////////////////////
 // Doot and related structures //
@@ -16,6 +17,12 @@ struct SubDoot {
 	std::string	task;
 	int		deadline;
 	bool		done;
+
+	// TODO: properties like
+	// - priority
+	// - color yellow if close to deadline
+	// - color red if deadline is passed
+	// - time before warning notification
 };
 
 using SubDoots = std::vector <SubDoot>;
@@ -23,7 +30,7 @@ using SubDoots = std::vector <SubDoot>;
 // A single task
 struct Dootling {
 	std::string	title;
-	SubDoots	sub_doots;
+	SubDoots	subdoots;
 	bool		done;
 };
 
