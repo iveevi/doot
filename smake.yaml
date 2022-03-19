@@ -1,6 +1,6 @@
 builds:
   - doot_release:
-    - sources: 'main.cpp, util.cpp, write.cpp, parser.cpp'
+    - sources: 'main.cpp, util.cpp, write.cpp, parser.cpp, app.cpp'
     - libraries: ncurses
 
 targets:

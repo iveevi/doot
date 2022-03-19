@@ -65,17 +65,24 @@ class App {
 	WinContent win_content = WIN_CONTENT_DOOTS;
 
 	// All windows
-	tuicpp::BoxedWindow whole;
+	tuicpp::BoxedWindow *whole;
 
-	tuicpp::DecoratedWindow doots;
-	tuicpp::DecoratedWindow dootlings;
-	tuicpp::DecoratedWindow subdoots;
-	tuicpp::Table <SubDoot> subdoot_table;
+	tuicpp::DecoratedWindow *menu;
+	tuicpp::DecoratedWindow *doots;
+	tuicpp::DecoratedWindow *dootlings;
+	tuicpp::DecoratedWindow *subdoots;
+	tuicpp::Table <SubDoot> *subdoot_table;
 
-	tuicpp::BoxedWindow editor;
+	tuicpp::BoxedWindow *editor;
+
+	// Doots
+	Doots doot_list;
 public:
 	// Constructor initializes all the windows
-	App();
+	App(const Doots &);
+	
+	// Destructor
+	~App();
 
 	// Run application
 	void run();

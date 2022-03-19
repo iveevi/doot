@@ -1,5 +1,9 @@
 #include "global.hpp"
 
+///////////////////////
+// Utility functions //
+///////////////////////
+
 // Read file into string
 std::string read_glob(const std::string &path)
 {

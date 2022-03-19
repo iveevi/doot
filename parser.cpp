@@ -1,5 +1,9 @@
 #include "global.hpp"
 
+///////////////////
+// Parsing doots //
+///////////////////
+
 // Skip whitespace
 void skip_whitespace(const std::string &glob, size_t &i)
 {
