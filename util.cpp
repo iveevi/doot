@@ -23,3 +23,19 @@ std::string read_glob(const std::string &path)
 
 	return content;
 }
+
+// Convert unix time to human readable time
+std::string time_to_string(int time)
+{
+	// Conver to time_t
+	time_t t = time;
+
+	// Convert to string
+	std::string s = ctime(&t);
+
+	// Remove newline
+	s.pop_back();
+
+	return s;
+}
+

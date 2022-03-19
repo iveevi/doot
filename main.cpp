@@ -32,47 +32,6 @@ xEnglish
 "xAP English Composition":31231213:false
 )";
 
-// Convert unix time to human readable time
-std::string time_to_string(int time)
-{
-	// Conver to time_t
-	time_t t = time;
-
-	// Convert to string
-	std::string s = ctime(&t);
-
-	// Remove newline
-	s.pop_back();
-
-	return s;
-}
-
-/////////////////////////
-// Write todos to file //
-/////////////////////////
-
-void write_subdoot(std::ostream &fout, const SubDoot &subdoot)
-{
-	fout << "\"" << subdoot.task << "\"" << ":" << subdoot.deadline
-		<< ":" << std::boolalpha << subdoot.done << "\n";
-}
-
-void write_dootling(std::ostream &fout, const Dootling &dootling)
-{
-	fout << "[Dootling]\n" << dootling.title << "\n";
-
-	for (const auto &subdoot : dootling.subdoots)
-		write_subdoot(fout, subdoot);
-}
-
-void write_doot(std::ostream &fout, const Doot &doot)
-{
-	fout << "[Doot]\n" << doot.title << "\n";
-
-	for (const auto &dootling : doot.dootlings)
-		write_dootling(fout, dootling);
-}
-
 // TODO: Table class
 // to update:
 // - either a list of vectors
@@ -97,18 +56,159 @@ int main()
 	// TODO: wrap all this in a class (BoxedWindow derivative)
 
 	// Menu window
-	tuicpp::BoxedWindow menu("Menu",
+	tuicpp::DecoratedWindow menu("Menu",
 		tuicpp::ScreenInfo {
-			.height = 20,
+			.height = 6,
 			.width = 20,
 			.y = 40,
 			.x = 0
 		}
 	);
 
-	int height = tuicpp::BoxedWindow::decoration_height
+	tuicpp::PlainWindow bwin(
+		tuicpp::ScreenInfo {
+			.height = 6,
+			.width = 60,
+			.y = 40,
+			.x = 20
+		}
+	);
+
+	// Table on bwin using first dootling
+	Dootling dtng = doots[0].dootlings[0];
+
+	// Table window
+	tuicpp::Table <SubDoot> table(
+		{"Task", "Deadline", "Status"},
+		dtng.subdoots,
+		[&](const SubDoot &subdoot, size_t col) -> std::string {
+			if (col == 0)
+				return subdoot.task;
+			else if (col == 1)
+				return time_to_string(subdoot.deadline);
+			else if (col == 2)
+				return (subdoot.done ? "Done" : "Not Done");
+			else
+				return "?";
+		},
+		tuicpp::ScreenInfo {
+			.height = 10,
+			.width = 60,
+			.y = 50,
+			.x = 0
+		}
+	);
+	table.refresh();
+
+	std::vector <std::string> columns {
+		"Task",
+		"Deadline",
+		"Status"
+	};
+
+	// Longest lengths for each column
+	std::vector <int> lengths {
+		0,
+		0,
+		0
+	};
+
+	for (const auto &subdoot : dtng.subdoots) {
+		std::string t = time_to_string(subdoot.deadline);
+		std::string s = subdoot.done ? "Done" : "Not done";
+		lengths[0] = std::max(lengths[0], (int) subdoot.task.size());
+		lengths[1] = std::max(lengths[1], (int) t.size());
+		lengths[2] = std::max(lengths[2], (int) s.size());
+	}
+
+	int total_width = 0;
+	for (const auto &length : lengths)
+		total_width += length + 1;
+
+	int line = 0;
+
+	// Top bar
+	int x = 0;
+	
+	bwin.mvadd_char(line, 0, ACS_ULCORNER);
+	for (size_t i = 0; i < columns.size(); i++) {
+		for (int j = 0; j < lengths[i] + 2; j++)
+			bwin.mvadd_char(line, x + j + 1, ACS_HLINE);
+		x += lengths[i] + 3;
+
+		if (i != columns.size() - 1)
+			bwin.mvadd_char(line, x, ACS_TTEE);
+		else
+			bwin.mvadd_char(line, x, ACS_URCORNER);
+	}
+	line++;
+
+	// Columns
+	x = 1;
+	for (size_t i = 0; i < columns.size(); i++) {
+		bwin.mvprintf(line, x, " %s ", columns[i].c_str());
+		x += lengths[i] + 3;
+		bwin.mvadd_char(line, x - 1, ACS_VLINE);
+	}
+	bwin.mvadd_char(line, 0, ACS_VLINE);
+	line++;
+
+	// Middle bar
+	x = 0;
+	
+	bwin.mvadd_char(line, 0, ACS_LTEE);
+	for (size_t i = 0; i < columns.size(); i++) {
+		for (int j = 0; j < lengths[i] + 2; j++)
+			bwin.mvadd_char(line, x + j + 1, ACS_HLINE);
+		x += lengths[i] + 3;
+
+		if (i != columns.size() - 1)
+			bwin.mvadd_char(line, x, ACS_PLUS);
+		else
+			bwin.mvadd_char(line, x, ACS_RTEE);
+	}
+	line++;
+
+	// Rows
+	for (const auto &subdoot : dtng.subdoots) {
+		int x = 0;
+		bwin.mvadd_char(line, x, ACS_VLINE); x++;
+
+		std::string t = time_to_string(subdoot.deadline);
+		std::string s = subdoot.done ? "Done" : "Not done";
+
+		bwin.mvprintf(line, x, " %s ", subdoot.task.c_str());  x += lengths[0] + 2;
+		bwin.mvadd_char(line, x, ACS_VLINE); x++;
+		
+		bwin.mvprintf(line, x, " %s ", t.c_str());  x += lengths[1] + 2;
+		bwin.mvadd_char(line, x, ACS_VLINE); x++;
+		
+		bwin.mvprintf(line, x, " %s ", s.c_str()); x += lengths[2] + 2;
+		bwin.mvadd_char(line, x, ACS_VLINE); 
+		line++;
+	}
+
+	// Bottom bar
+	x = 0;
+	
+	bwin.mvadd_char(line, 0, ACS_LLCORNER);
+	for (size_t i = 0; i < columns.size(); i++) {
+		for (int j = 0; j < lengths[i] + 2; j++)
+			bwin.mvadd_char(line, x + j + 1, ACS_HLINE);
+		x += lengths[i] + 3;
+
+		if (i != columns.size() - 1)
+			bwin.mvadd_char(line, x, ACS_BTEE);
+		else
+			bwin.mvadd_char(line, x, ACS_LRCORNER);
+	}
+	line++;
+
+	bwin.refresh();
+
+	int height = tuicpp::DecoratedWindow::decoration_height
 		+ std::max(doots.size(), 10ul);
-	tuicpp::BoxedWindow win("Doots",
+	tuicpp::DecoratedWindow win("Doots",
 		tuicpp::ScreenInfo {
 			.height = height,
 			.width = 20,
@@ -117,7 +217,7 @@ int main()
 		}
 	);
 
-	tuicpp::BoxedWindow dootlings("Dootlings",
+	tuicpp::DecoratedWindow dootlings("Dootlings",
 		tuicpp::ScreenInfo {
 			.height = height,
 			.width = 20,
@@ -126,11 +226,25 @@ int main()
 		}
 	);
 	
-	tuicpp::BoxedWindow subdoots("Subdoots",
+	tuicpp::DecoratedWindow subdoots("Subdoots",
 		tuicpp::ScreenInfo {
 			.height = height,
 			.width = 60,
 			.y = 20,
+			.x = 0
+		}
+	);
+
+	// Editor window at the bottom
+	int max_width = 0;
+	int max_height = 0;
+
+	getmaxyx(stdscr, max_height, max_width);
+	tuicpp::BoxedWindow editor(
+		tuicpp::ScreenInfo {
+			.height = 3,
+			.width = max_width,
+			.y = max_height - 3,
 			.x = 0
 		}
 	);
@@ -142,7 +256,7 @@ int main()
 	int highlight = 0;
 	int column = 0;
 
-	int line = 0;
+	line = 0;
 	int dootling = -1;
 
 	// TODO: selection box element and highlight box thingy
@@ -158,19 +272,39 @@ int main()
 			dootling = 0;
 		}
 
+		// Highlight appropriate column
+		if (column == 0) {
+			win.attr_title(A_REVERSE);
+			dootlings.attr_title(A_NORMAL);
+
+			menu.erase();
+			menu.printf("[+] Add doot");
+		} else {
+			win.attr_title(A_NORMAL);
+			dootlings.attr_title(A_REVERSE);
+
+			menu.erase();
+			menu.printf("[+] Add dootling");
+		}
+
 		if (column == 0) {
 			if (c == KEY_UP) {
+
 				highlight--;
 				if (highlight < 0)
 					highlight = doots.size() - 1;
 				else
 					dootling = -1;
+				
+				dootlings.erase();
 			} else if (c == KEY_DOWN) {
 				highlight++;
 				if (highlight >= doots.size())
 					highlight = 0;
 				else
 					dootling = -1;
+				
+				dootlings.erase();
 			}
 		} else {
 			if (c == KEY_UP) {
@@ -180,10 +314,14 @@ int main()
 					dootling--;
 				if (dootling < 0)
 					dootling = doots[highlight].dootlings.size() - 1;
+
+				dootlings.erase();
 			} else if (c == KEY_DOWN) {
 				dootling++;
 				if (dootling >= doots[highlight].dootlings.size())
 					dootling = 0;
+				
+				dootlings.erase();
 			}
 		}
 
@@ -227,9 +365,6 @@ int main()
 	} while ((c = win.getc()) != 'q');
 
 	endwin();
-
-	// Check if file_path exists
-	
 
 	// Open file
 	std::ofstream fout(file_path);
