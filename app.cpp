@@ -1,5 +1,28 @@
 #include "global.hpp"
 
+////////////////////////////////////
+// Static variables and functions //
+////////////////////////////////////
+
+const tuicpp::Table <SubDoot> ::Headers App::headers {
+	"Task", "Deadline", "Status"
+};
+
+const tuicpp::Table <SubDoot> ::From App::from {
+	App::headers, App::subdoot_element
+};
+
+std::string App::subdoot_element(const SubDoot &subdoot, size_t col)
+{
+	if (col == 0)
+		return subdoot.task;
+	else if (col == 1)
+		return time_to_string(subdoot.deadline);
+	else if (col == 2)
+		return (subdoot.done ? "Done" : "Not Done");
+	return "?";
+}
+
 ///////////////////////
 // Application class //
 ///////////////////////
@@ -13,16 +36,13 @@ App::App(const Doots &dts) : doot_list(dts)
         curs_set(0);
 
 	// Initialize colors
-        start_color();
-
-	// Highlight color
-	init_pair(1, COLOR_WHITE, COLOR_RED);
+	start_color();
 
 	// Menu window
-	menu = new tuicpp::DecoratedWindow("Menu",
+	menu = new tuicpp::DecoratedWindow("Options",
 		tuicpp::ScreenInfo {
-			.height = 6,
-			.width = 20,
+			.height = 10,
+			.width = 25,
 			.y = 40,
 			.x = 0
 		}
@@ -61,31 +81,22 @@ App::App(const Doots &dts) : doot_list(dts)
 		}
 	);
 
-	// Table window
-	Dootling dtng = doot_list[0].dootlings[0];
+	// Set table to some garbage
+	auto f = from;
+	f.data = {};
 
 	subdoot_table = new tuicpp::Table <SubDoot> (
-		{"Task", "Deadline", "Status"},
-		dtng.subdoots,
-		[&](const SubDoot &subdoot, size_t col) -> std::string {
-			if (col == 0)
-				return subdoot.task;
-			else if (col == 1)
-				return time_to_string(subdoot.deadline);
-			else if (col == 2)
-				return (subdoot.done ? "Done" : "Not Done");
-			else
-				return "?";
-		},
+		f,
 		tuicpp::ScreenInfo {
 			.height = 10,
-			.width = 60,
-			.y = 50,
-			.x = 0
+			.width = 58,
+			.y = 24,
+			.x = 1
 		}
 	);
 
-	// Editor window at the bottom
+	// TODO: get max x and y as a Window static method
+	/* Editor window at the bottom
 	int max_width = 0;
 	int max_height = 0;
 
@@ -97,9 +108,9 @@ App::App(const Doots &dts) : doot_list(dts)
 			.y = max_height - 3,
 			.x = 0
 		}
-	);
-	
-	editor->set_keypad(true);
+	); */
+
+	doots->set_keypad(true);
 }
 
 // Destructor
@@ -117,121 +128,151 @@ App::~App()
 	endwin();
 }
 
+// Check inputs
+void App::check_up()
+{
+	Dootlings &dts = doot_list[curr_doot].dootlings;
+	switch (win_content) {
+	case WIN_CONTENT_DOOTS:
+		curr_doot = (curr_doot + doot_list.size() - 1)
+			% doot_list.size();
+		dootlings->erase();
+		curr_subdoot = 0;
+		break;
+	case WIN_CONTENT_DOOTLINGS:
+		curr_dootling = (curr_dootling + dts.size() - 1)
+			% dts.size();
+		curr_subdoot = 0;
+		break;
+	case WIN_CONTENT_SUBDOOTS:
+		curr_subdoot = (curr_subdoot + dts[curr_dootling].subdoots.size() - 1)
+			% dts[curr_dootling].subdoots.size();
+		break;
+	}
+}
+
+void App::check_down()
+{
+	Dootlings &dts = doot_list[curr_doot].dootlings;
+	switch (win_content) {
+	case WIN_CONTENT_DOOTS:
+		curr_doot = (curr_doot + 1) % doot_list.size();
+		dootlings->erase();
+		curr_subdoot = 0;
+		break;
+	case WIN_CONTENT_DOOTLINGS:
+		curr_dootling = (curr_dootling + 1) % dts.size();
+		curr_subdoot = 0;
+		break;
+	case WIN_CONTENT_SUBDOOTS:
+		curr_subdoot = (curr_subdoot + 1)
+			% dts[curr_dootling].subdoots.size();
+		break;
+	}
+}
+
+void App::check_inputs(int c)
+{
+	// Switching active window
+	if (c == KEY_LEFT)
+		win_content = (win_content + 2) % 3;
+	else if (c == KEY_RIGHT)
+		win_content = (win_content + 1) % 3;
+
+	// Switching active doot/dootling/subdoot
+	if (c == KEY_UP)
+		check_up();
+	else if (c == KEY_DOWN)
+		check_down();
+}
+
 // Run function
 void App::run()
 {
 	// Main loop
 	int c = 0;
-	
-	int highlight = 0;
-	int column = 0;
-
 	int line = 0;
-	int dootling = -1;
 
 	// TODO: selection box element and highlight box thingy
 
 	do {
-		// Check up and down keys
-		// TODO: function
-		if (c == KEY_LEFT) {
-			column = 0;
-			dootling = 0;
-		} else if (c == KEY_RIGHT) {
-			column = 1;
-			dootling = 0;
-		}
+		// Check inputs
+		check_inputs(c);
 
 		// Highlight appropriate column
-		if (column == 0) {
+		// TODO: method
+		doots->attr_title(A_NORMAL);
+		dootlings->attr_title(A_NORMAL);
+		subdoots->attr_title(A_NORMAL);
+
+		switch (win_content) {
+		case WIN_CONTENT_DOOTS:
 			doots->attr_title(A_REVERSE);
-			dootlings->attr_title(A_NORMAL);
-
-			menu->erase();
-			menu->printf("[+] Add doot");
-		} else {
-			doots->attr_title(A_NORMAL);
+			break;
+		case WIN_CONTENT_DOOTLINGS:
 			dootlings->attr_title(A_REVERSE);
-
-			menu->erase();
-			menu->printf("[+] Add dootling");
+			break;
+		case WIN_CONTENT_SUBDOOTS:
+			subdoots->attr_title(A_REVERSE);
+			break;
 		}
 
-		if (column == 0) {
-			if (c == KEY_UP) {
-
-				highlight--;
-				if (highlight < 0)
-					highlight = doot_list.size() - 1;
-				else
-					dootling = -1;
-				
-				dootlings->erase();
-			} else if (c == KEY_DOWN) {
-				highlight++;
-				if (highlight >= doot_list.size())
-					highlight = 0;
-				else
-					dootling = -1;
-				
-				dootlings->erase();
-			}
-		} else {
-			if (c == KEY_UP) {
-				if (dootling == -1)
-					dootling = doot_list[highlight].dootlings.size() - 1;
-				else
-					dootling--;
-				if (dootling < 0)
-					dootling = doot_list[highlight].dootlings.size() - 1;
-
-				dootlings->erase();
-			} else if (c == KEY_DOWN) {
-				dootling++;
-				if (dootling >= doot_list[highlight].dootlings.size())
-					dootling = 0;
-				
-				dootlings->erase();
-			}
+		// TODO: method for options
+		menu->erase();
+		switch (win_content) {
+		case WIN_CONTENT_DOOTS:
+			menu->printf("[+]     Add doot\n");
+			menu->printf("[-]     Remove doot\n");
+			break;
+		case WIN_CONTENT_DOOTLINGS:
+			menu->printf("[+]     Add dootling\n");
+			menu->printf("[-]     Remove dootling\n");
+			break;
+		case WIN_CONTENT_SUBDOOTS:
+			menu->printf("[+]     Add subdoot\n");
+			menu->printf("[-]     Remove subdoot\n");
+			menu->printf("[Enter] Edit subdoot\n");
+			break;
 		}
+		
 
+		// TODO: method for printing
 		// Print doots
 		line = 0;
 		for (size_t i = 0; i < doot_list.size(); i++) {
-			if (i == highlight)
-				doots->attribute_on(COLOR_PAIR(1));
+			if (i == curr_doot)
+				doots->attribute_set(A_REVERSE);
 
 			doots->mvprintf(line++, 0, doot_list[i].title.c_str());
 
-			if (i == highlight)
-				doots->attribute_off(COLOR_PAIR(1));
+			if (i == curr_doot)
+				doots->attribute_set(A_NORMAL);
 		}
 
 		// Print dootling for selected doot
-		Dootlings ds = doot_list[highlight].dootlings;
+		Dootlings ds = doot_list[curr_doot].dootlings;
 
 		line = 0;
 		for (size_t i = 0; i < ds.size(); i++) {
-			if (i == dootling)
-				dootlings->attribute_on(COLOR_PAIR(1));
+			if (i == curr_dootling)
+				dootlings->attribute_set(A_REVERSE);
 
 			dootlings->mvprintf(line++, 0, ds[i].title.c_str());
 
-			if (i == dootling)
-				dootlings->attribute_off(COLOR_PAIR(1));
+			if (i == curr_dootling)
+				dootlings->attribute_set(A_NORMAL);
 		}
 
-		if (dootling >= 0) {
-			SubDoots sd = ds[dootling].subdoots;
-
-			line = 0;
-			for (size_t i = 0; i < sd.size(); i++)
-				subdoots->mvprintf(line++, 0, sd[i].task.c_str());
-		}
+		// Update subdoot table
+		SubDoots sd = ds[curr_dootling].subdoots;
+		subdoot_table->set_lengths({20, 20, 8});
+		subdoot_table->set_data(sd);
+		subdoot_table->highlight_row(curr_subdoot);
 
 		// Refresh windows
-		subdoots->refresh();
+		// subdoots->refresh();
 		dootlings->refresh();
 		doots->refresh();
-	} while ((c = editor->getc()) != 'q');
+		// editor->refresh();
+	} while ((c = doots->getc()) != 'q');
 }

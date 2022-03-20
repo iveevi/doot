@@ -55,14 +55,12 @@ using Doots = std::vector <Doot>;
 
 class App {
 	// Enumerations for current window
-	enum WinContent : int {
-		WIN_CONTENT_DOOTS = 0,
-		WIN_CONTENT_DOOTLINGS,
-		WIN_CONTENT_SUBDOOTS
-	};
+	static constexpr int WIN_CONTENT_DOOTS = 0;
+	static constexpr int WIN_CONTENT_DOOTLINGS = 1;
+	static constexpr int WIN_CONTENT_SUBDOOTS = 2;
 
 	// Current window
-	WinContent win_content = WIN_CONTENT_DOOTS;
+	int win_content = WIN_CONTENT_DOOTS;
 
 	// All windows
 	tuicpp::BoxedWindow *whole;
@@ -77,6 +75,16 @@ class App {
 
 	// Doots
 	Doots doot_list;
+
+	// Run variables
+	int curr_doot = 0;
+	int curr_dootling = 0;
+	int curr_subdoot = 0;
+
+	// Check inputs
+	void check_up();
+	void check_down();
+	void check_inputs(int);
 public:
 	// Constructor initializes all the windows
 	App(const Doots &);
@@ -86,6 +94,12 @@ public:
 
 	// Run application
 	void run();
+
+	// Static variables and functions
+	static const tuicpp::Table <SubDoot> ::Headers headers;
+	static const tuicpp::Table <SubDoot> ::From from;
+
+	static std::string subdoot_element(const SubDoot &, size_t);
 };
 
 ///////////////
