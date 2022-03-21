@@ -74,7 +74,7 @@ App::App(const Doots &dts) : doot_list(dts)
 	// Subdoots window
 	subdoots = new tuicpp::DecoratedWindow("Subdoots",
 		tuicpp::ScreenInfo {
-			.height = height,
+			.height = 15,
 			.width = 60,
 			.y = 20,
 			.x = 0
@@ -83,8 +83,6 @@ App::App(const Doots &dts) : doot_list(dts)
 
 	// Set table to some garbage
 	auto f = from;
-	f.data = {};
-
 	subdoot_table = new tuicpp::Table <SubDoot> (
 		f,
 		tuicpp::ScreenInfo {
@@ -96,20 +94,6 @@ App::App(const Doots &dts) : doot_list(dts)
 	);
 
 	// TODO: get max x and y as a Window static method
-	/* Editor window at the bottom
-	int max_width = 0;
-	int max_height = 0;
-
-	getmaxyx(stdscr, max_height, max_width);
-	editor = new tuicpp::BoxedWindow(
-		tuicpp::ScreenInfo {
-			.height = 3,
-			.width = max_width,
-			.y = max_height - 3,
-			.x = 0
-		}
-	); */
-
 	doots->set_keypad(true);
 }
 
@@ -122,7 +106,6 @@ App::~App()
 	delete subdoots;
 	delete subdoot_table;
 	delete menu;
-	delete editor;
 
 	// End ncurses
 	endwin();
@@ -137,11 +120,13 @@ void App::check_up()
 		curr_doot = (curr_doot + doot_list.size() - 1)
 			% doot_list.size();
 		dootlings->erase();
+		subdoot_table->erase();
 		curr_subdoot = 0;
 		break;
 	case WIN_CONTENT_DOOTLINGS:
 		curr_dootling = (curr_dootling + dts.size() - 1)
 			% dts.size();
+		subdoot_table->erase();
 		curr_subdoot = 0;
 		break;
 	case WIN_CONTENT_SUBDOOTS:
@@ -158,10 +143,12 @@ void App::check_down()
 	case WIN_CONTENT_DOOTS:
 		curr_doot = (curr_doot + 1) % doot_list.size();
 		dootlings->erase();
+		subdoot_table->erase();
 		curr_subdoot = 0;
 		break;
 	case WIN_CONTENT_DOOTLINGS:
 		curr_dootling = (curr_dootling + 1) % dts.size();
+		subdoot_table->erase();
 		curr_subdoot = 0;
 		break;
 	case WIN_CONTENT_SUBDOOTS:
@@ -184,6 +171,103 @@ void App::check_inputs(int c)
 		check_up();
 	else if (c == KEY_DOWN)
 		check_down();
+
+	// Adding new doots, dootlings, or subdoots
+	if (c == '=') {
+		// doot_list.push_back(Doot {"New Doot", {}, false});
+		int n;
+		switch (win_content) {
+		case WIN_CONTENT_DOOTS:
+			n = doot_list.size() + 1;
+			doot_list.push_back(Doot {"Dooty " + std::to_string(n), {}, false});
+			curr_doot = doot_list.size() - 1;
+			create_editor();
+			break;
+		case WIN_CONTENT_DOOTLINGS:
+			// doot_list[curr_doot].dootlings.push_back(Dootling());
+			break;
+		case WIN_CONTENT_SUBDOOTS:
+			break;
+		}
+	}
+}
+
+// Create editor window
+// TODO: pass type of fields to pass
+// TODO: tuicpp class
+void App::create_editor()
+{
+	auto pr = tuicpp::Window::limits();
+
+	// TODO: static map of editor dimensions for each type of field
+	int h = 10;
+	int w = 20;
+
+	int wy = (pr.first - h)/2;
+	int wx = (pr.second - w)/2;
+
+	editor = new tuicpp::DecoratedWindow("Editor",
+		tuicpp::ScreenInfo {h, w, wy, wx}
+	);
+	editor->printf("title: ");
+
+	// Allow cursor and echo
+	curs_set(1);
+	echo();
+
+	auto tmp = tuicpp::FieldEditor <std::string, std::string> {
+		"Editor",
+		{"title", "title2"},
+		tuicpp::ScreenInfo {
+			.height = h,
+			.width = w,
+			.y = 1,
+			.x = 1
+		}
+	};
+
+	// TODO: dont return until done editing
+	std::string title;
+	int c;
+
+	while ((c = editor->getc()) != 10) {
+		if (c == KEY_BACKSPACE) {
+			if (title.size() > 0)
+				title.pop_back();
+		} else {
+			title += c;
+		}
+
+		editor->mvprintf(0, 7, "%s", title.c_str());
+	}
+
+	Doot &d = doot_list[curr_doot];
+	d.title = title;
+
+	// Reset current values
+	curr_dootling = -1;
+	curr_subdoot = -1;
+
+	dootlings->erase();
+	subdoot_table->erase();
+
+	// Remove the editor and remake subdoots 
+	delete subdoots;
+	delete editor;
+
+	// TODO: function to clear and function to reinitialize ALL windows
+	subdoots = new tuicpp::DecoratedWindow("Subdoots",
+		tuicpp::ScreenInfo {
+			.height = 15,
+			.width = 60,
+			.y = 20,
+			.x = 0
+		}
+	);
+
+	// Reset cursor and echo
+	curs_set(0);
+	noecho();
 }
 
 // Run function
@@ -218,18 +302,20 @@ void App::run()
 		}
 
 		// TODO: method for options
+		// TODO: tuicpp input handler (for compounding ie. + and
+		// cntrl+shift, etc)
 		menu->erase();
 		switch (win_content) {
 		case WIN_CONTENT_DOOTS:
-			menu->printf("[+]     Add doot\n");
+			menu->printf("[=]     Add doot\n");
 			menu->printf("[-]     Remove doot\n");
 			break;
 		case WIN_CONTENT_DOOTLINGS:
-			menu->printf("[+]     Add dootling\n");
+			menu->printf("[=]     Add dootling\n");
 			menu->printf("[-]     Remove dootling\n");
 			break;
 		case WIN_CONTENT_SUBDOOTS:
-			menu->printf("[+]     Add subdoot\n");
+			menu->printf("[=]     Add subdoot\n");
 			menu->printf("[-]     Remove subdoot\n");
 			menu->printf("[Enter] Edit subdoot\n");
 			break;
@@ -249,30 +335,33 @@ void App::run()
 				doots->attribute_set(A_NORMAL);
 		}
 
-		// Print dootling for selected doot
-		Dootlings ds = doot_list[curr_doot].dootlings;
+		if (doot_list[curr_doot].dootlings.size() > 0) {
+			// Print dootling for selected doot
+			Dootlings ds = doot_list[curr_doot].dootlings;
 
-		line = 0;
-		for (size_t i = 0; i < ds.size(); i++) {
-			if (i == curr_dootling)
-				dootlings->attribute_set(A_REVERSE);
+			line = 0;
+			for (size_t i = 0; i < ds.size(); i++) {
+				if (i == curr_dootling)
+					dootlings->attribute_set(A_REVERSE);
 
-			dootlings->mvprintf(line++, 0, ds[i].title.c_str());
+				dootlings->mvprintf(line++, 0, ds[i].title.c_str());
 
-			if (i == curr_dootling)
-				dootlings->attribute_set(A_NORMAL);
+				if (i == curr_dootling)
+					dootlings->attribute_set(A_NORMAL);
+			}
+
+			if (ds[curr_dootling].subdoots.size() > 0) {
+				// Update subdoot table
+				SubDoots sd = ds[curr_dootling].subdoots;
+				subdoot_table->set_lengths({20, 20, 8});
+				subdoot_table->set_data(sd);
+				subdoot_table->highlight_row(curr_subdoot);
+			}
 		}
 
-		// Update subdoot table
-		SubDoots sd = ds[curr_dootling].subdoots;
-		subdoot_table->set_lengths({20, 20, 8});
-		subdoot_table->set_data(sd);
-		subdoot_table->highlight_row(curr_subdoot);
-
 		// Refresh windows
-		// subdoots->refresh();
+		subdoot_table->refresh();
 		dootlings->refresh();
 		doots->refresh();
-		// editor->refresh();
 	} while ((c = doots->getc()) != 'q');
 }

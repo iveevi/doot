@@ -69,9 +69,9 @@ class App {
 	tuicpp::DecoratedWindow *doots;
 	tuicpp::DecoratedWindow *dootlings;
 	tuicpp::DecoratedWindow *subdoots;
-	tuicpp::Table <SubDoot> *subdoot_table;
+	tuicpp::DecoratedWindow *editor = nullptr;
 
-	tuicpp::BoxedWindow *editor;
+	tuicpp::Table <SubDoot> *subdoot_table;
 
 	// Doots
 	Doots doot_list;
@@ -85,6 +85,9 @@ class App {
 	void check_up();
 	void check_down();
 	void check_inputs(int);
+
+	// Creaing windows
+	void create_editor();
 public:
 	// Constructor initializes all the windows
 	App(const Doots &);
