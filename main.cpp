@@ -42,8 +42,12 @@ int main()
 	// TODO: later add default names (Dooty #1, Dooty #2, etc.)
 	Doots doots = parse_doots(str);
 
-	App app(doots);
-	app.run();
+	StringFeeder sf("8:00");
+	auto rv = rule <date> ::value(&sf);
+	std::cout << "RV: " << rv->str() << std::endl;
+
+	/* App app(doots);
+	app.run(); */
 
 	return 0;
 }

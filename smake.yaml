@@ -1,11 +1,21 @@
+definitions:
+  - doot_sources: 'main.cpp, util.cpp, write.cpp, parser.cpp, app.cpp'
+
 builds:
   - doot_release:
-    - sources: 'main.cpp, util.cpp, write.cpp, parser.cpp, app.cpp'
+    - sources: doot_sources
     - libraries: ncurses
+  - doot_debug:
+    - sources: doot_sources
+    - libraries: ncurses
+    - flags: -g
 
 targets:
   - doot:
+    - modes: gdb
     - builds:
       - default: doot_release
+      - gdb: doot_debug
     - postbuilds:
       - default: '{}'
+      - gdb: 'gdb {}'

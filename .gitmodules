@@ -1,3 +1,6 @@
 [submodule "tuicpp"]
 	path = tuicpp
 	url = https://github.com/vedavamadathil/tuicpp
+[submodule "nabu"]
+	path = nabu
+	url = https://github.com/vedavamadathil/nabu

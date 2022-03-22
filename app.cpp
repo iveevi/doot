@@ -93,6 +93,8 @@ App::App(const Doots &dts) : doot_list(dts)
 		}
 	);
 
+	// TODO: help window, list supported date formats
+
 	// TODO: get max x and y as a Window static method
 	doots->set_keypad(true);
 }
@@ -174,7 +176,9 @@ void App::check_inputs(int c)
 
 	// Adding new doots, dootlings, or subdoots
 	if (c == '=') {
-		// doot_list.push_back(Doot {"New Doot", {}, false});
+		// TODO: separate function
+		Dootlings &dts = doot_list[curr_doot].dootlings;
+
 		int n;
 		switch (win_content) {
 		case WIN_CONTENT_DOOTS:
@@ -184,15 +188,34 @@ void App::check_inputs(int c)
 			create_doot_editor();
 			break;
 		case WIN_CONTENT_DOOTLINGS:
-			// doot_list[curr_doot].dootlings.push_back(Dootling());
+			n = doot_list[curr_doot].dootlings.size() + 1;
+			dts.push_back(
+				Dootling {"Dootling " + std::to_string(n),
+				{}, false}
+			);
+
+			curr_dootling = doot_list[curr_doot].dootlings.size() - 1;
+			create_dootling_editor();
 			break;
 		case WIN_CONTENT_SUBDOOTS:
+			n = doot_list[curr_doot].dootlings[curr_dootling].subdoots.size() + 1;
+			dts[curr_dootling].subdoots.push_back(
+				SubDoot {
+					"Subdoot " + std::to_string(n),
+					{}, false
+				}
+			);
+
+			curr_subdoot = doot_list[curr_doot]
+				.dootlings[curr_dootling]
+				.subdoots.size() - 1;
+			create_subdoot_editor();
 			break;
 		}
 	}
 }
 
-// Create editor window
+// Create doot editor window
 void App::create_doot_editor()
 {
 	auto pr = tuicpp::Window::limits();
@@ -224,8 +247,8 @@ void App::create_doot_editor()
 	d.title = title;
 
 	// Reset current values
-	curr_dootling = -1;
-	curr_subdoot = -1;
+	curr_dootling = 0;
+	curr_subdoot = 0;
 
 	dootlings->erase();
 	subdoot_table->erase();
@@ -243,10 +266,120 @@ void App::create_doot_editor()
 			.x = 0
 		}
 	);
+}
 
-	// Reset cursor and echo
-	curs_set(0);
-	noecho();
+// Create dootling editor window
+void App::create_dootling_editor()
+{
+	auto pr = tuicpp::Window::limits();
+
+	int h = 7;
+	int w = 30;
+
+	int wy = (pr.first - h)/2;
+	int wx = (pr.second - w)/2;
+
+	auto editor = new tuicpp::FieldEditor {
+		"Editor",
+		{"title"},
+		tuicpp::ScreenInfo {
+			.height = h,
+			.width = w,
+			.y = wy,
+			.x = wx
+		}
+	};
+
+	std::string title;
+	editor->yield({
+		tuicpp::yielder(&title)
+	});
+
+	// Save values
+	Dootling &dt = doot_list[curr_doot]
+		.dootlings[curr_dootling];
+	dt.title = title;
+
+	// Reset current values
+	curr_subdoot = 0;
+
+	dootlings->erase();
+	subdoot_table->erase();
+
+	// Remove the editor and remake subdoots 
+	delete editor;
+	delete subdoots;
+
+	// TODO: function to clear and function to reinitialize ALL windows
+	subdoots = new tuicpp::DecoratedWindow("Subdoots",
+		tuicpp::ScreenInfo {
+			.height = 15,
+			.width = 60,
+			.y = 20,
+			.x = 0
+		}
+	);
+}
+
+// Create subdoot editor window
+void App::create_subdoot_editor()
+{
+	auto pr = tuicpp::Window::limits();
+
+	int h = 8;
+	int w = 30;
+
+	int wy = (pr.first - h)/2;
+	int wx = (pr.second - w)/2;
+
+	// TODO: make a "move_update" parameter to update
+	// the editor window when cursor moved
+	auto editor = new tuicpp::FieldEditor {
+		"Editor",
+		{"task", "date", "time"},
+		tuicpp::ScreenInfo {
+			.height = h,
+			.width = w,
+			.y = wy,
+			.x = wx
+		}
+	};
+
+	std::string title;
+	std::string deadline;
+	std::string time;
+
+	editor->yield({
+		tuicpp::yielder(&title),
+		tuicpp::yielder(&deadline),
+		tuicpp::yielder(&time)
+	});
+
+	// Save values
+	SubDoot &sd = doot_list[curr_doot]
+		.dootlings[curr_dootling]
+		.subdoots[curr_subdoot];
+	sd.task = title;
+
+	// Reset current values
+	curr_subdoot = 0;
+
+	dootlings->erase();
+	subdoot_table->erase();
+
+	// Remove the editor and remake subdoots 
+	delete editor;
+	delete subdoots;
+
+	// TODO: function to clear and function to reinitialize ALL windows
+	subdoots = new tuicpp::DecoratedWindow("Subdoots",
+		tuicpp::ScreenInfo {
+			.height = 15,
+			.width = 60,
+			.y = 20,
+			.x = 0
+		}
+	);
 }
 
 // Run function

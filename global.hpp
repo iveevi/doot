@@ -6,6 +6,7 @@
 #include <string>
 #include <vector>
 
+#include "nabu/nabu.hpp"
 #include "tuicpp/tuicpp.hpp"
 
 /////////////////////////////////
@@ -117,5 +118,21 @@ std::string time_to_string(int);
 Doots parse_doots(const std::string &);
 
 void write_doot(std::ostream &, const Doot &);
+
+////////////////////
+// Parsers (nabu) //
+////////////////////
+
+struct date {};
+
+using nabu::rules::rule;
+using nabu::rules::lit;
+using nabu::rules::multiplex;
+using nabu::StringFeeder;
+
+template <>
+struct nabu::rules::rule <date> : public multiplex <
+		int, lit <':'>, int
+	> {};
 
 #endif
