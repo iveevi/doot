@@ -87,7 +87,9 @@ class App {
 	void check_inputs(int);
 
 	// Creaing windows
-	void create_editor();
+	void create_doot_editor();
+	void create_dootling_editor();
+	void create_subdoot_editor();
 public:
 	// Constructor initializes all the windows
 	App(const Doots &);

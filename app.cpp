@@ -181,7 +181,7 @@ void App::check_inputs(int c)
 			n = doot_list.size() + 1;
 			doot_list.push_back(Doot {"Dooty " + std::to_string(n), {}, false});
 			curr_doot = doot_list.size() - 1;
-			create_editor();
+			create_doot_editor();
 			break;
 		case WIN_CONTENT_DOOTLINGS:
 			// doot_list[curr_doot].dootlings.push_back(Dootling());
@@ -193,54 +193,33 @@ void App::check_inputs(int c)
 }
 
 // Create editor window
-// TODO: pass type of fields to pass
-// TODO: tuicpp class
-void App::create_editor()
+void App::create_doot_editor()
 {
 	auto pr = tuicpp::Window::limits();
 
-	// TODO: static map of editor dimensions for each type of field
-	int h = 10;
-	int w = 20;
+	int h = 7;
+	int w = 30;
 
 	int wy = (pr.first - h)/2;
 	int wx = (pr.second - w)/2;
 
-	editor = new tuicpp::DecoratedWindow("Editor",
-		tuicpp::ScreenInfo {h, w, wy, wx}
-	);
-	editor->printf("title: ");
-
-	// Allow cursor and echo
-	curs_set(1);
-	echo();
-
-	auto tmp = tuicpp::FieldEditor <std::string, std::string> {
+	auto editor = new tuicpp::FieldEditor {
 		"Editor",
-		{"title", "title2"},
+		{"title"},
 		tuicpp::ScreenInfo {
 			.height = h,
 			.width = w,
-			.y = 1,
-			.x = 1
+			.y = wy,
+			.x = wx
 		}
 	};
 
-	// TODO: dont return until done editing
 	std::string title;
-	int c;
+	editor->yield({
+		tuicpp::yielder(&title)
+	});
 
-	while ((c = editor->getc()) != 10) {
-		if (c == KEY_BACKSPACE) {
-			if (title.size() > 0)
-				title.pop_back();
-		} else {
-			title += c;
-		}
-
-		editor->mvprintf(0, 7, "%s", title.c_str());
-	}
-
+	// Save values
 	Doot &d = doot_list[curr_doot];
 	d.title = title;
 
@@ -252,8 +231,8 @@ void App::create_editor()
 	subdoot_table->erase();
 
 	// Remove the editor and remake subdoots 
-	delete subdoots;
 	delete editor;
+	delete subdoots;
 
 	// TODO: function to clear and function to reinitialize ALL windows
 	subdoots = new tuicpp::DecoratedWindow("Subdoots",
