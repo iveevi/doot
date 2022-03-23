@@ -37,17 +37,64 @@ xEnglish
 // - either a list of vectors
 // - or list of structs, then lambda to process
 
+void notify(const std::string &msg)
+{
+	static std::string ncmd = "notify-send -t 5000 'doot' ";
+	static std::string pcmd = "aplay";
+
+	std::string cmd = ncmd + " \'" + msg + "\' "
+		+ " && " + pcmd + " sounds/notif_sound_1.wav";
+
+	system(cmd.c_str());
+}
+
 int main()
 {
-	// TODO: later add default names (Dooty #1, Dooty #2, etc.)
-	Doots doots = parse_doots(str);
+	// TODO: -d option for daemon mode
+	std::cout << "Daemon mode? (y/n): ";
+	std::string input;
+	std::cin >> input;
 
-	StringFeeder sf("8:00");
-	auto rv = rule <date> ::value(&sf);
-	std::cout << "RV: " << rv->str() << std::endl;
+	if (input == "y") {
+		std::cout << "Daemon mode enabled" << std::endl;
 
-	/* App app(doots);
-	app.run(); */
+		Doots doots = parse_doots(str);
+		while (true) {
+			// Get current time
+			long int now = time(NULL);
+
+			// Check if any subdoots are overdue
+			for (auto &doot : doots) {
+				for (auto &dootling : doot.dootlings) {
+					for (auto &subdoot : dootling.subdoots) {
+						if (subdoot.deadline < now
+								&& !subdoot.done
+								&& !subdoot.overdued) {
+							// TODO: need to mark as
+							// notified
+							std::string msg = "[" + doot.title + "/"
+								+ dootling.title + "] Overdue task "
+								+ subdoot.task;
+							notify(msg);
+							subdoot.overdued = true;
+						}
+					}
+				}
+			}
+
+			// TODO: sleep and reload doots
+			// sleep(60);
+		}
+	} else {
+		std::string str = read_glob("doot_list.txt");
+		Doots doots = parse_doots(str);
+
+		App app(doots);
+		app.run();
+
+		// Save doots
+		app.save("doot_list.txt");
+	}
 
 	return 0;
 }

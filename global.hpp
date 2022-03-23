@@ -14,10 +14,13 @@
 /////////////////////////////////
 
 // Subtasks
+// TODO: calendar view of all tasks (7 days per row, etc. -- weekly and monthly
+// as well as a view of all tasks due today)
 struct SubDoot {
 	std::string	task;
-	int		deadline;
+	long int	deadline;
 	bool		done;
+	bool		overdued;
 
 	// TODO: properties like
 	// - priority
@@ -101,6 +104,9 @@ public:
 	// Run application
 	void run();
 
+	// Save to file
+	void save(const std::string &);
+
 	// Static variables and functions
 	static const tuicpp::Table <SubDoot> ::Headers headers;
 	static const tuicpp::Table <SubDoot> ::From from;
@@ -123,16 +129,88 @@ void write_doot(std::ostream &, const Doot &);
 // Parsers (nabu) //
 ////////////////////
 
-struct date {};
+struct date_time {
+	int hour;
+	int minute;
+	int second;
+};
 
+struct date {
+	int month;
+	int day;
+	int year;
+};
+
+using nabu::ret;
+using nabu::Tret;
+using nabu::get;
 using nabu::rules::rule;
 using nabu::rules::lit;
 using nabu::rules::multiplex;
+using nabu::rules::sequential;
 using nabu::StringFeeder;
+using nabu::Feeder;
+
+/* TODO: allow 12-hour time format
+constexpr char am_lower[] = "am";
+constexpr char am_upper[] = "AM";
+constexpr char pm_lower[] = "pm";
+constexpr char pm_upper[] = "PM";
+*/
 
 template <>
-struct nabu::rules::rule <date> : public multiplex <
+inline std::string nabu::convert_string <date_time> (const date_time &pr)
+{
+	return std::to_string(pr.hour) + ":"
+		+ std::to_string(pr.minute) + ":"
+		+ std::to_string(pr.second);
+}
+
+template <>
+inline std::string nabu::convert_string <date> (const date &pr)
+{
+	return std::to_string(pr.month) + "/"
+		+ std::to_string(pr.day) + "/"
+		+ std::to_string(pr.year);
+}
+
+template <>
+struct nabu::rules::rule <date_time> : public sequential <
 		int, lit <':'>, int
-	> {};
+	> {
+	
+	// Override value
+	static ret value(Feeder *fd) {
+		ret rptr = _value(fd);
+		if (!rptr)
+			return rptr;
+
+		auto rv = getrv(rptr);
+		int hour = get <int> (rv[0]);
+		int minute = get <int> (rv[2]);
+
+		return ret(new Tret <date_time> ({hour, minute, 0}));
+	}
+};
+
+template <>
+struct nabu::rules::rule <date> : public sequential <
+		int, lit <'/'>, int
+	> {
+	
+	// Override value
+	static ret value(Feeder *fd) {
+		ret rptr = _value(fd);
+		if (!rptr)
+			return rptr;
+
+		auto rv = getrv(rptr);
+		int month = get <int> (rv[0]);
+		int day = get <int> (rv[2]);
+		// int year = get <int> (rv[4]);
+
+		return ret(new Tret <date> ({month, day, 2022}));
+	}
+};
 
 #endif

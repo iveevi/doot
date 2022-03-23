@@ -176,39 +176,15 @@ void App::check_inputs(int c)
 
 	// Adding new doots, dootlings, or subdoots
 	if (c == '=') {
-		// TODO: separate function
-		Dootlings &dts = doot_list[curr_doot].dootlings;
-
 		int n;
 		switch (win_content) {
 		case WIN_CONTENT_DOOTS:
-			n = doot_list.size() + 1;
-			doot_list.push_back(Doot {"Dooty " + std::to_string(n), {}, false});
-			curr_doot = doot_list.size() - 1;
 			create_doot_editor();
 			break;
 		case WIN_CONTENT_DOOTLINGS:
-			n = doot_list[curr_doot].dootlings.size() + 1;
-			dts.push_back(
-				Dootling {"Dootling " + std::to_string(n),
-				{}, false}
-			);
-
-			curr_dootling = doot_list[curr_doot].dootlings.size() - 1;
 			create_dootling_editor();
 			break;
 		case WIN_CONTENT_SUBDOOTS:
-			n = doot_list[curr_doot].dootlings[curr_dootling].subdoots.size() + 1;
-			dts[curr_dootling].subdoots.push_back(
-				SubDoot {
-					"Subdoot " + std::to_string(n),
-					{}, false
-				}
-			);
-
-			curr_subdoot = doot_list[curr_doot]
-				.dootlings[curr_dootling]
-				.subdoots.size() - 1;
 			create_subdoot_editor();
 			break;
 		}
@@ -238,13 +214,15 @@ void App::create_doot_editor()
 	};
 
 	std::string title;
-	editor->yield({
+	bool filled = editor->yield({
 		tuicpp::yielder(&title)
 	});
 
 	// Save values
-	Doot &d = doot_list[curr_doot];
-	d.title = title;
+	if (filled) {
+		doot_list.push_back(Doot {title, {}, false});
+		curr_doot = doot_list.size() - 1;
+	}
 
 	// Reset current values
 	curr_dootling = 0;
@@ -291,17 +269,21 @@ void App::create_dootling_editor()
 	};
 
 	std::string title;
-	editor->yield({
+	bool filled = editor->yield({
 		tuicpp::yielder(&title)
 	});
 
 	// Save values
-	Dootling &dt = doot_list[curr_doot]
-		.dootlings[curr_dootling];
-	dt.title = title;
+	if (filled) {
+		doot_list[curr_doot].dootlings.push_back(
+			Dootling {title, {}, false}
+		);
 
-	// Reset current values
-	curr_subdoot = 0;
+		curr_dootling = doot_list[curr_doot].dootlings.size() - 1;
+
+		// Reset current values
+		curr_subdoot = 0;
+	}
 
 	dootlings->erase();
 	subdoot_table->erase();
@@ -326,7 +308,7 @@ void App::create_subdoot_editor()
 {
 	auto pr = tuicpp::Window::limits();
 
-	int h = 8;
+	int h = 9;
 	int w = 30;
 
 	int wy = (pr.first - h)/2;
@@ -349,20 +331,49 @@ void App::create_subdoot_editor()
 	std::string deadline;
 	std::string time;
 
-	editor->yield({
+	bool filled = editor->yield({
 		tuicpp::yielder(&title),
 		tuicpp::yielder(&deadline),
 		tuicpp::yielder(&time)
 	});
 
 	// Save values
-	SubDoot &sd = doot_list[curr_doot]
-		.dootlings[curr_dootling]
-		.subdoots[curr_subdoot];
-	sd.task = title;
+	// TODO: function here
+	if (filled) {
+		StringFeeder sf_deadline(deadline);
+		StringFeeder sf_time(time);
 
-	// Reset current values
-	curr_subdoot = 0;
+		auto ret1 = rule <date_time> ::value(&sf_time);
+		auto ret2 = rule <date> ::value(&sf_deadline);
+
+		date_time dt = get <date_time> (ret1);
+		date d = get <date> (ret2);
+
+		std::tm tm = {
+			.tm_sec = dt.second,
+			.tm_min = dt.minute,
+			.tm_hour = dt.hour,
+			.tm_mday = d.day,
+			.tm_mon = d.month - 1,
+			.tm_year = d.year - 1900,
+			.tm_isdst = -1
+		};
+
+		time_t t = mktime(&tm);
+
+		doot_list[curr_doot].dootlings[curr_dootling].subdoots.push_back(
+			SubDoot {
+				title,
+				t,
+				false,
+				false
+			}
+		);
+
+		curr_subdoot = doot_list[curr_doot]
+			.dootlings[curr_dootling]
+			.subdoots.size() - 1;
+	}
 
 	dootlings->erase();
 	subdoot_table->erase();
@@ -427,6 +438,7 @@ void App::run()
 			menu->printf("[-]     Remove dootling\n");
 			break;
 		case WIN_CONTENT_SUBDOOTS:
+			menu->printf("[i]     Details\n");
 			menu->printf("[=]     Add subdoot\n");
 			menu->printf("[-]     Remove subdoot\n");
 			menu->printf("[Enter] Edit subdoot\n");
@@ -476,4 +488,12 @@ void App::run()
 		dootlings->refresh();
 		doots->refresh();
 	} while ((c = doots->getc()) != 'q');
+}
+
+// Save doots to file
+void App::save(const std::string &path)
+{
+	std::ofstream ofs(path);
+	for (auto &doot : doot_list)
+		write_doot(ofs, doot);
 }

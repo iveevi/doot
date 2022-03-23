@@ -77,7 +77,7 @@ SubDoot parse_subdoot(const std::string &glob, size_t &i)
 	}
 
 	// Return
-	return SubDoot {task, deadline, done};
+	return SubDoot {task, deadline, done, false};
 }
 
 Dootling parse_dootling(const std::string &glob, size_t &i)
