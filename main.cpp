@@ -48,6 +48,70 @@ void notify(const std::string &msg)
 	system(cmd.c_str());
 }
 
+// Get subdoots from doots
+struct ExtendedSubDoot {
+	std::string doot;
+	std::string dootling;
+
+	SubDoot subdoot;
+};
+
+using ExtendedSubDoots = std::vector <ExtendedSubDoot>;
+
+ExtendedSubDoots get_esubdoots(const Doots &doots)
+{
+	ExtendedSubDoots esubdoots;
+
+	for (const auto &doot : doots) {
+		for (const auto &dootling : doot.dootlings) {
+			for (const auto &subdoot : dootling.subdoots) {
+				esubdoots.push_back({
+					doot.title,
+					dootling.title,
+					subdoot
+				});
+			}
+		}
+	}
+
+	return esubdoots;
+}
+
+// Daemon program
+void daemon()
+{
+	std::set <std::string> marked_overdue;
+
+	while (true) {
+		std::string str = read_glob(file_path);
+		Doots doots = parse_doots(str);
+
+		// Get current time
+		long int now = time(NULL);
+
+		ExtendedSubDoots esubdoots = get_esubdoots(doots);
+		for (auto &esubdoot : esubdoots) {
+			SubDoot subdoot = esubdoot.subdoot;
+			std::string name = subdoot.task;
+			if (subdoot.deadline < now && !subdoot.done
+					&& !marked_overdue.count(name)) {
+				std::string msg = "[" + esubdoot.doot + "/"
+					+ esubdoot.dootling + "] Overdue task "
+					+ name;
+
+				std::cout << msg << std::endl;
+				notify(msg);
+
+				// Mark as overdue
+				marked_overdue.insert(name);
+			}
+		}
+
+		// TODO: delay should be configurable
+		sleep(1);
+	}
+}
+
 int main()
 {
 	// TODO: -d option for daemon mode
@@ -57,34 +121,7 @@ int main()
 
 	if (input == "y") {
 		std::cout << "Daemon mode enabled" << std::endl;
-
-		Doots doots = parse_doots(str);
-		while (true) {
-			// Get current time
-			long int now = time(NULL);
-
-			// Check if any subdoots are overdue
-			for (auto &doot : doots) {
-				for (auto &dootling : doot.dootlings) {
-					for (auto &subdoot : dootling.subdoots) {
-						if (subdoot.deadline < now
-								&& !subdoot.done
-								&& !subdoot.overdued) {
-							// TODO: need to mark as
-							// notified
-							std::string msg = "[" + doot.title + "/"
-								+ dootling.title + "] Overdue task "
-								+ subdoot.task;
-							notify(msg);
-							subdoot.overdued = true;
-						}
-					}
-				}
-			}
-
-			// TODO: sleep and reload doots
-			// sleep(60);
-		}
+		daemon();
 	} else {
 		std::string str = read_glob("doot_list.txt");
 		Doots doots = parse_doots(str);

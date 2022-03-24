@@ -42,7 +42,7 @@ App::App(const Doots &dts) : doot_list(dts)
 	menu = new tuicpp::DecoratedWindow("Options",
 		tuicpp::ScreenInfo {
 			.height = 10,
-			.width = 25,
+			.width = 30,
 			.y = 40,
 			.x = 0
 		}
@@ -186,6 +186,36 @@ void App::check_inputs(int c)
 			break;
 		case WIN_CONTENT_SUBDOOTS:
 			create_subdoot_editor();
+			break;
+		}
+	}
+
+	// Deleting doots, dootlings, or subdoots
+	if (c == '-') {
+		switch (win_content) {
+		case WIN_CONTENT_DOOTS:
+			delete_doot();
+			break;
+		case WIN_CONTENT_DOOTLINGS:
+			delete_dootling();
+			break;
+		case WIN_CONTENT_SUBDOOTS:
+			delete_subdoot();
+			break;
+		}
+	}
+
+	// Editing doots, dootlings, or subdoots
+	if (c == 'e') {
+		switch (win_content) {
+		case WIN_CONTENT_DOOTS:
+			edit_doot();
+			break;
+		case WIN_CONTENT_DOOTLINGS:
+			edit_dootling();
+			break;
+		case WIN_CONTENT_SUBDOOTS:
+			edit_subdoot();
 			break;
 		}
 	}
@@ -365,7 +395,6 @@ void App::create_subdoot_editor()
 			SubDoot {
 				title,
 				t,
-				false,
 				false
 			}
 		);
@@ -391,6 +420,237 @@ void App::create_subdoot_editor()
 			.x = 0
 		}
 	);
+}
+
+// Delete current doot
+void App::delete_doot()
+{
+	doot_list.erase(doot_list.begin() + curr_doot);
+	curr_doot = std::max(0, curr_doot - 1);
+	curr_dootling = 0;
+	curr_subdoot = 0;
+
+	doots->erase();
+	dootlings->erase();
+	subdoot_table->erase();
+}
+
+// Delete current dootling
+void App::delete_dootling()
+{
+	doot_list[curr_doot].dootlings.erase(
+		doot_list[curr_doot].dootlings.begin()
+			+ curr_dootling
+	);
+
+	curr_dootling = std::max(0, curr_dootling - 1);
+	curr_subdoot = 0;
+
+	dootlings->erase();
+	subdoot_table->erase();
+}
+
+// Delete current subdoot
+void App::delete_subdoot()
+{
+	doot_list[curr_doot]
+		.dootlings[curr_dootling]
+		.subdoots.erase(
+			doot_list[curr_doot]
+				.dootlings[curr_dootling]
+				.subdoots.begin() + curr_subdoot
+		);
+
+	curr_subdoot = std::max(0, curr_subdoot - 1);
+
+	dootlings->erase();
+	subdoot_table->erase();
+}
+
+// Edit current doot
+// TODO: some easier system for all this window creation
+void App::edit_doot()
+{
+	auto pr = tuicpp::Window::limits();
+
+	int h = 7;
+	int w = 30;
+
+	int wy = (pr.first - h)/2;
+	int wx = (pr.second - w)/2;
+
+	auto editor = new tuicpp::FieldEditor {
+		"Editor",
+		{"title"},
+		tuicpp::ScreenInfo {
+			.height = h,
+			.width = w,
+			.y = wy,
+			.x = wx
+		}
+	};
+
+	bool filled = editor->yield({
+		tuicpp::yielder(&doot_list[curr_doot].title)
+	});
+
+	// Reset current values
+	curr_dootling = 0;
+	curr_subdoot = 0;
+
+	dootlings->erase();
+	subdoot_table->erase();
+
+	// Remove the editor and remake subdoots 
+	delete editor;
+	delete subdoots;
+
+	// TODO: function to clear and function to reinitialize ALL windows
+	subdoots = new tuicpp::DecoratedWindow("Subdoots",
+		tuicpp::ScreenInfo {
+			.height = 15,
+			.width = 60,
+			.y = 20,
+			.x = 0
+		}
+	);
+}
+
+// Edit current dootling
+void App::edit_dootling()
+{
+	auto pr = tuicpp::Window::limits();
+
+	int h = 7;
+	int w = 30;
+
+	int wy = (pr.first - h)/2;
+	int wx = (pr.second - w)/2;
+
+	auto editor = new tuicpp::FieldEditor {
+		"Editor",
+		{"title"},
+		tuicpp::ScreenInfo {
+			.height = h,
+			.width = w,
+			.y = wy,
+			.x = wx
+		}
+	};
+
+	bool filled = editor->yield({
+		tuicpp::yielder(&doot_list[curr_doot]
+			.dootlings[curr_dootling].title
+		)
+	});
+
+	dootlings->erase();
+	subdoot_table->erase();
+
+	// Remove the editor and remake subdoots 
+	delete editor;
+	delete subdoots;
+
+	// TODO: function to clear and function to reinitialize ALL windows
+	subdoots = new tuicpp::DecoratedWindow("Subdoots",
+		tuicpp::ScreenInfo {
+			.height = 15,
+			.width = 60,
+			.y = 20,
+			.x = 0
+		}
+	);
+}
+
+// Create subdoot editor window
+void App::edit_subdoot()
+{
+	// TODO: fill out
+	/* auto pr = tuicpp::Window::limits();
+
+	int h = 9;
+	int w = 30;
+
+	int wy = (pr.first - h)/2;
+	int wx = (pr.second - w)/2;
+
+	// TODO: make a "move_update" parameter to update
+	// the editor window when cursor moved
+	auto editor = new tuicpp::FieldEditor {
+		"Editor",
+		{"task", "date", "time"},
+		tuicpp::ScreenInfo {
+			.height = h,
+			.width = w,
+			.y = wy,
+			.x = wx
+		}
+	};
+
+	std::string title;
+	std::string deadline;
+	std::string time;
+
+	bool filled = editor->yield({
+		tuicpp::yielder(&title),
+		tuicpp::yielder(&deadline),
+		tuicpp::yielder(&time)
+	});
+
+	// Save values
+	// TODO: function here
+	if (filled) {
+		StringFeeder sf_deadline(deadline);
+		StringFeeder sf_time(time);
+
+		auto ret1 = rule <date_time> ::value(&sf_time);
+		auto ret2 = rule <date> ::value(&sf_deadline);
+
+		date_time dt = get <date_time> (ret1);
+		date d = get <date> (ret2);
+
+		std::tm tm = {
+			.tm_sec = dt.second,
+			.tm_min = dt.minute,
+			.tm_hour = dt.hour,
+			.tm_mday = d.day,
+			.tm_mon = d.month - 1,
+			.tm_year = d.year - 1900,
+			.tm_isdst = -1
+		};
+
+		time_t t = mktime(&tm);
+
+		doot_list[curr_doot].dootlings[curr_dootling].subdoots.push_back(
+			SubDoot {
+				title,
+				t,
+				false,
+				false
+			}
+		);
+
+		curr_subdoot = doot_list[curr_doot]
+			.dootlings[curr_dootling]
+			.subdoots.size() - 1;
+	}
+
+	dootlings->erase();
+	subdoot_table->erase();
+
+	// Remove the editor and remake subdoots 
+	delete editor;
+	delete subdoots;
+
+	// TODO: function to clear and function to reinitialize ALL windows
+	subdoots = new tuicpp::DecoratedWindow("Subdoots",
+		tuicpp::ScreenInfo {
+			.height = 15,
+			.width = 60,
+			.y = 20,
+			.x = 0
+		}
+	); */
 }
 
 // Run function
@@ -432,16 +692,18 @@ void App::run()
 		case WIN_CONTENT_DOOTS:
 			menu->printf("[=]     Add doot\n");
 			menu->printf("[-]     Remove doot\n");
+			menu->printf("[e]     Edit doot\n");
 			break;
 		case WIN_CONTENT_DOOTLINGS:
 			menu->printf("[=]     Add dootling\n");
 			menu->printf("[-]     Remove dootling\n");
+			menu->printf("[e]     Edit dootling\n");
 			break;
 		case WIN_CONTENT_SUBDOOTS:
 			menu->printf("[i]     Details\n");
 			menu->printf("[=]     Add subdoot\n");
 			menu->printf("[-]     Remove subdoot\n");
-			menu->printf("[Enter] Edit subdoot\n");
+			menu->printf("[e]     Edit subdoot\n");
 			break;
 		}
 		

@@ -6,6 +6,8 @@
 #include <string>
 #include <vector>
 
+#include <unistd.h>
+
 #include "nabu/nabu.hpp"
 #include "tuicpp/tuicpp.hpp"
 
@@ -20,7 +22,6 @@ struct SubDoot {
 	std::string	task;
 	long int	deadline;
 	bool		done;
-	bool		overdued;
 
 	// TODO: properties like
 	// - priority
@@ -94,6 +95,16 @@ class App {
 	void create_doot_editor();
 	void create_dootling_editor();
 	void create_subdoot_editor();
+
+	// Deleting
+	void delete_doot();
+	void delete_dootling();
+	void delete_subdoot();
+
+	// Editing
+	void edit_doot();
+	void edit_dootling();
+	void edit_subdoot();
 public:
 	// Constructor initializes all the windows
 	App(const Doots &);
